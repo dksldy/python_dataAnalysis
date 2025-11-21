@@ -56,7 +56,8 @@ data = {
   'score': [ 75.0 ,  60.5 ,  82.7  ,  50.3]
 }
 
-df = pd.DataFrame(data)
+idx = ['aa', 'bb', 'cc', 'dd']
+df = pd.DataFrame(data, index=idx)
 print(f'{df}')
 
 print(f'index (행의 인덱스) :\n{df.index}\n')

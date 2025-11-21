@@ -32,7 +32,7 @@ print(df.isnull().sum())
 print('* ----- 결측치 대체 전 ----- *')
 print(df['age'])
 # print(df['age'].fillna(0))
-# df['age'] = df['age'].fillna(0)
+df['age'] = df['age'].fillna(0)
 
 print('* ----- 결측치 대체 후 ----- *')
 print(df['age'])
@@ -42,6 +42,7 @@ print('* ----- age 중앙값 ----- *')
 print(df['age'].median())
 
 # --- age 컬럼의 결측치를 중앙값으로 대체 ---
+print('* ----- age 중앙값 대체 후 ----- *')
 print(df['age'].fillna(df['age'].median()))
 
 # * 결측치 제거 : dropna(subset=[컬럼])
@@ -58,7 +59,7 @@ print('-' * 30)
 print(df_drop.duplicated(subset=['no','name']))    # 'name' 조건 추가(중복여부 확인)
 
 # 중복 행 제거
-# df_drop = df_drop.drop_duplicates(subset=['no'], keep='first')
+# df_drop = df_drop.drop_duplicates(subset=['no'], keep='first') # => or keep='last'
 df_drop = df_drop.drop_duplicates(subset=['no', 'name'], keep='first')
 # => 'no' 는 같지만 'name' 이 달라 중복으로 인식 X
 print('---- 중복 행 제거 ----')
@@ -71,15 +72,15 @@ print('----- 데이터 타입 변환 -----')
 # is_active : 'ok' / 'nok' -> True / False
 
 print(df_drop['is_active'])
-df_drop['is_active'] = df_drop['is_active'].map({'of' : True, 'nok' : False}).astype(bool)
+df_drop['is_active'] = df_drop['is_active'].map({'ok' : True, 'nok' : False}).astype(bool)
 
 print('---- 변환 후 데이터 ----')
 print(df_drop['is_active'])
 
 # age 컬럼의 데이터를 float -> int 변환
-# df_drop['age'] = df_drop['age'].astype(np.int64) # => int 사용해도됨
+df_drop['age'] = df_drop['age'].astype(np.int64) # => int 사용해도됨
 # => NaN 포함시 타입변경 불가
-# print(df_drop['age'])
+print(df_drop['age'])
 
 # * 모든 컬럼의 데이터타입... dtypes
 # print(df_drop.dtypes)

@@ -14,6 +14,7 @@ data = {
 }
 index = ['user1', 'user2', 'user3']
 df = pd.DataFrame(data, index=index)
+print(df)
 
 print(f'data    : {data}')
 print(f'index   : {df.index}')
