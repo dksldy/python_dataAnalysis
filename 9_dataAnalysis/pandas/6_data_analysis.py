@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 # data.csv 파일을 읽어 df 변수에 저장
 df = pd.read_csv('data.csv')
 print(df)
@@ -53,6 +54,139 @@ rating_by_category = df.groupby('Product_Category')['Customer_Rating']
 print(f'\n상품 카테고리 별 고객 평점의 중앙값 :\n{rating_by_category.median()}')
 
 #     2) 결측치를 중앙값으로 변경
+def test_func(x):
+  print('* ----- test_func ----- *')
+  print('* 현재 그룹 정보 : *')
+  print(x)
+  print(f'* 그룹의 중앙값 : {x.median()} *')
+  print(x.fillna(x.median()))
+  # x.fillna => x의 값중 NaN 값을 x.median(x의 중앙값) 으로 대체 하겠다
+  print('* --------------------- *')
+# print(df)
+# rating_by_category.transform(test_func)
+
+
 df['Customer_Rating'] = rating_by_category.transform(lambda x: x.fillna(x.median()))
 print(f' * 처리 후 고객 평점결측치 개수 : {df["Customer_Rating"].isnull().sum()}')
 print(df["Customer_Rating"])
+
+# * 판매 금액 (Sales_Amount) 컬럼의 결측치를 지역(Region)별 판매금액 평균으로 변경
+df['Sales_Amount'] = df.groupby('Region')['Sales_Amount'].transform(lambda x: x.fillna(x.mean()))
+print('* ----- 고객 평점, 판매 금액 컬럼의 결측치 처리 ----- *')
+print(df[['Customer_Rating','Sales_Amount']].isnull().sum())
+
+# * 판매 수량(Units_Sold) 컬럼에 결측치를 전체 데이터의 최빈값으로 변경
+#   - 최빈값 : 가장 자주 나오는 값. mode()
+print(f'판매 수량의 최빈값 : {df["Units_Sold"].mode()}')
+print(df["Units_Sold"].mode()[0])
+# => 최빈값의 경우 여러 개의 데이터가 결과로 표시되어, 값 자체를 사용할 때 첫번째 데이터를 선택
+
+# 판매 수량의 결측치를 최빈값으로 변경
+df['Units_Sold'] = df['Units_Sold'].fillna(df['Units_Sold'].mode()[0])
+print(f'판매 수량 컬럼의 결측치 개수 : {df["Units_Sold"].isnull().sum()}')
+# ================================================================================================
+# * 이상치 (Outlier) 처리 *
+#   : 데이터의 대부분의 분포에서 벗어난 극단적인 값을 처리하는 과정
+#   : 상한선 (Capping)을 설정하여 이상치를 찾아 대체
+
+# * 판매금액 컬럼의 95% 분위수를 초과하는 값을 이상치로 판단하여
+#   설정된 상한선의 값으로 대체
+
+# 95% 분위수 => quantile(q%)
+cap = df['Sales_Amount'].quantile(0.95)
+print(f'판매 금액 컬럼의 95% 분위수 : {cap}')
+
+# 판매 금액 데이터 중 상한선을 초과하는 값을 상한선으로 변경
+# np.where(조건, 조건에 해당될때 사용할 값, 조건에 해당되지 않을때 사용할 값)
+print('* ------ 이상치 처리 전 ------ *')
+print(df['Sales_Amount'])
+df['Sales_Amount'] = np.where(df['Sales_Amount'] < cap, df['Sales_Amount'], cap)
+print('* ------ 이상치 처리 후 ------ *')
+print(df['Sales_Amount'])
+
+# ------------------------------------------------------------------------------------------------
+
+# * 컬럼 추가 : 기존 데이터를 활용하여 분석에 유의미한 새로운 변수 생성
+#               => 특성 공학 (Feature Engineering)
+
+# * 평균 판매 가격 계산 (Avg_Price)
+#   평균 판매 가격 = 판매금액 / 판매 수량
+df['Avg_Price'] = df['Sales_Amount'] / df['Units_Sold']
+
+print(df)
+
+# * 매출 등급 생성 (Sales_Grade)
+#   판매 금액이 전체 판매금액 평균보다 높으면 'High', 그렇지 않으면 'Low'
+sales_mean = df['Sales_Amount'].mean()
+df['Sales_Grade'] = np.where(df['Sales_Amount'] >= sales_mean , 'High', 'Low')
+print(df)
+# * ===================================== 전처리 완료 ========================================== *
+print("=="*20, ' 전처리 완료 ', "=="*20)
+
+# * 단순히 평균, 합계가 아닌 복합적인 통계 (그룹 별 비교, 정규화, 다차원 집계 등)를
+#   사용하여 데이터의 숨겨진 패턴이나 관계를 파악하는 과정 => 심층 분석
+
+# * 그룹별 복합 통계 *
+#   agg : 그룹화된 데이터에 대해 여러 개의 집계 함수를 한 번에 적용하여 요약 통계를 생성하는 함수
+#         groupby 결과에 대해 sum, mean, max, std 등 집계함수를 적용
+
+# 카테고리 별 판매 금액 컬럼에 대한 다양한 요약 통계
+# - 총합, 평균, 최대값, 표준편차
+category_stat = df.groupby('Product_Category')['Sales_Amount'].agg(
+  Total_Sales = 'sum',
+  Mean_Sales = 'mean',
+  Max_Sales = 'max',
+  Std_Sales = 'std'
+).round(2)
+# df.round(소수점_자리) : 해당 소숫점 자리까지 반올림
+# print(type(category_stat))
+print(category_stat)
+
+# * 그룹 내 비교 분석 *
+#   transform : 그룹화된 데이터를 이용하되, 그 결과를 원래 데이터프레임 크기에 맞게 변환하여 새로운 컬럼을 생성
+#               그룹 내 정규화나 그룹별 평균 대치 등에 활용
+
+# * 지역 별 고객 평점 평균을 기준으로 개별 평균 차이 (Rating_Diff) 컬럼 추가 
+# * 지역 별 고객 평점 평균
+print(f"지역 별 고객 평점 평균 :\n{df.groupby('Region')['Customer_Rating'].agg('mean')}\n")
+
+#   개별 평점 - 평점지역 별 고객 평점 평균 => + / -
+df['Rating_Diff'] = df.groupby('Region')['Customer_Rating'].transform(lambda x: x-x.mean()).round(2)
+
+# 지역, 고객평점, 평균대비 평점 차이 출력
+print(f"지역, 고객 평점, 평균대비 평점 차이 :\n{df[['Region', 'Customer_Rating', 'Rating_Diff']]}")
+
+# * 피벗 테이블
+#   pivot_table(df, index=행분류기준컬럼, columns=열분류기준컬럼, values=집계대상값, aggfunc=적용할집계함수)
+
+# - 카테고리 별 평균 금액 조회
+pivot_ctg_mean = pd.pivot_table(df
+               , index='Product_Category'
+               , values='Sales_Amount'
+               , aggfunc='mean')
+print('\n* 카테고리 별 평균 금액 *')
+print(pivot_ctg_mean)
+print()
+
+# - 카테고리별 프로모션 사용 여부에 대한 평균 금액 조회
+pivot_mean = pd.pivot_table(df
+               , index='Product_Category'
+               , columns='Promotion_Used'
+               , values='Sales_Amount'
+               , aggfunc='mean').round(2)
+print('* 카테고리 별 프로모션 사용 여부에 따른 평균 금액 *')
+print(pivot_mean)
+# => 피벗 테이블 : 복잡한 테이블 데이터를 2차원 교차 요약표 형태로 재구성하는 함수
+#                  groupby와 agg를 조합한 것 과 유사하지만, 
+#                  가로/세로 축으로 펼쳐서 보여주는 특징을 가짐
+
+# 카테고리 별 프로모션 사용 여부에 따른 평균금액, 평점평균 을 조회
+last_pivot = pd.pivot_table(df
+               , index='Product_Category'
+               , columns='Promotion_Used'
+               , values=['Sales_Amount', 'Customer_Rating']
+               , aggfunc={'Sales_Amount' : 'mean', 'Customer_Rating' : 'mean'}
+               , fill_value=0.0).round(2)
+# => 결측치 대체값 설정 : pivot_table(..., fill_value=대체값)
+print('* 카테고리 별 프로모션 사용 여부에 따른 평균 금액/평점 비교 *')
+print(last_pivot)
